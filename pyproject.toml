@@ -1,0 +1,17 @@
+[project]
+name = "rndexpart-weave"
+version = "0.1.0"
+description = "Graph gateway for rndexp.art. Single entry into Neo4j; extraction/synthesis primitives + AI watcher/worker."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "httpx>=0.27",
+  "neo4j>=5.24,<6.0",
+  "openai>=1.55",
+  "pydantic>=2.9",
+  "PyYAML>=6.0",
+]
+
+[tool.uv]
+package = false

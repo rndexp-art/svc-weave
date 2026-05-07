@@ -1,15 +1,39 @@
-# Compose fragment for the weave service.
-# Included by the gateway's docker-compose.generated.yml when this service is
-# enabled in config/services.yml. Bind container port to 127.0.0.1 only —
-# Caddy on the host (in --network host mode) will reverse-proxy.
+# weave service compose fragment. Included by the gateway's
+# docker-compose.generated.yml when `weave` is enabled in
+# config/services.yml.
+#
+# weave is the only gate into Neo4j. No public port. Reachable on the
+# docker network as `weave:8007/v1/...` from kiln, telegram-bot, explorer,
+# dashboard. End users never talk to weave directly.
 
 services:
   weave:
-    image: TODO/replace-with-real-image
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rndexpart/weave:local
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8007:8007"
-    # environment:
-    #   FOO: ${weave_FOO}
-    # volumes:
-    #   - ./services/weave/data:/data
+    expose:
+      - "8007"
+    environment:
+      NEO4J_URI: ${NEO4J_URI:-bolt://neo4j:7687}
+      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      WEAVE_INTERNAL_TOKEN: ${WEAVE_INTERNAL_TOKEN}
+      WEAVE_OPENAI_MODEL: ${WEAVE_OPENAI_MODEL:-gpt-4o-mini}
+      WEAVE_WATCHER_INTERVAL: ${WEAVE_WATCHER_INTERVAL:-60}
+      WEAVE_WORKER_INTERVAL: ${WEAVE_WORKER_INTERVAL:-30}
+      WEAVE_WATCHER_BATCH: ${WEAVE_WATCHER_BATCH:-10}
+      WEAVE_WORKER_BATCH: ${WEAVE_WORKER_BATCH:-25}
+      WEAVE_WATCHER_PATTERN_COOLDOWN_SEC: ${WEAVE_WATCHER_PATTERN_COOLDOWN_SEC:-3600}
+      WEAVE_SYNTHESIS_WORKER_ENABLED: ${WEAVE_SYNTHESIS_WORKER_ENABLED:-false}
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8007/healthz', timeout=2).status==200 else sys.exit(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

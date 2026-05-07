@@ -1,0 +1,102 @@
+# Single source of truth for which labels and edge types weave will write.
+#
+# Adding a new label or edge type is a PR. This is the cost of the
+# gatekeeping; it's intentional. Use `open_properties: true` on a label
+# when the domain truly is open and you want to accept unknown properties.
+#
+# Label keys here use dot-notation for multi-label nodes — `input.note` is
+# a node with both `:input` and `:note` labels (and we always write them
+# together, never one without the other). For matching, weave splits on
+# the dot.
+#
+# `required`: properties that must be present on CREATE.
+# `optional`: properties that MAY be present.
+# `immutable`: properties that, once set, cannot be PATCHed.
+# `open_properties`: if true, accept properties not listed in required/optional.
+
+labels:
+  agent:
+    required:  [auth_user_id, name, kind, created_at]
+    optional:  [email]
+    immutable: [auth_user_id, created_at]
+    open_properties: true   # `kind`, role, future extension
+
+  identity:
+    required:  [provider_name, external_id, kind, created_at]
+    optional:  [username, first_name, last_name, name, email]
+    immutable: [provider_name, external_id, created_at]
+    open_properties: true
+
+  source:
+    required:  [provider_name, external_id, kind, created_at]
+    optional:  [title, chat_type, mirrors_provider_name, mirrors_external_id]
+    immutable: [provider_name, external_id, created_at]
+    open_properties: true
+
+  provider:
+    required:  [name, kind, created_at]
+    optional:  []
+    immutable: [name, created_at]
+    open_properties: true
+
+  input.note:
+    required:  [note_id, provider_name, external_chat_id, external_id, content, created_at]
+    optional:  [sent_at, archived_at, trashed_at, meta, is_edit, original_external_id, updated_at]
+    immutable: [note_id, provider_name, external_chat_id, external_id, created_at]
+    open_properties: false
+
+  input.task:
+    required:  [task_id, provider_name, external_chat_id, external_id, title, description, status, created_at, updated_at]
+    optional:  [priority, due_at, tags, estimate_minutes, category, context, links, notes,
+                completed_at, archived_at, trashed_at, meta]
+    immutable: [task_id, provider_name, external_chat_id, external_id, created_at]
+    open_properties: false
+
+  prompt:
+    required:  [prompt_id, pattern_key, version, kind, status, fingerprint,
+                detector_prompt, extractor_prompt, output_schema, created_at]
+    optional:  [examples, notes]
+    immutable: [prompt_id, pattern_key, version, fingerprint, created_at]
+    open_properties: false
+
+  extraction:
+    required:  [extraction_id, started_at, finished_at, output_node_count, output_edge_count]
+    optional:  [prompt_id, model, meta]
+    immutable: [extraction_id, started_at, finished_at]
+    open_properties: false
+
+  synthesis:
+    required:  [synthesis_id, started_at, finished_at, output_node_count, output_edge_count]
+    optional:  [prompt_id, model, meta]
+    immutable: [synthesis_id, started_at, finished_at]
+    open_properties: false
+
+  edge_record:
+    required:  [edge_id, type, src_node_id, dst_node_id, created_at]
+    optional:  [properties_json]
+    immutable: [edge_id, type, src_node_id, dst_node_id, created_at]
+    open_properties: false
+
+# Edge types weave will write. `from`/`to` lists the label CATEGORIES (label
+# without the leading `input.` prefix is the category) that may be the
+# source/destination. `input` matches any node that has the `:input` label.
+edges:
+  source:           { from: [input], to: [source] }
+  author:           { from: [input], to: [identity] }
+  agent:            { from: [identity], to: [agent] }
+  provider:         { from: [identity, source, agent], to: [provider] }
+  owner:            { from: [source], to: [agent] }
+  readable:         { from: [source], to: [agent] }
+  writeable:        { from: [source], to: [agent] }
+  extracted_from:   { from: [input], to: [input] }
+  synthesized_from: { from: [input], to: [input, edge_record] }
+  produced:         { from: [extraction, synthesis], to: [input, edge_record] }
+  from:             { from: [extraction, synthesis], to: [input, edge_record] }
+  by:               { from: [extraction, synthesis], to: [agent] }
+  used_prompt:      { from: [extraction, synthesis], to: [prompt] }
+  supersedes:       { from: [prompt], to: [prompt] }
+  authored_by:      { from: [prompt], to: [agent] }
+  processed:        { from: [agent, prompt], to: [input, extraction, synthesis] }
+  chained:          { from: [input], to: [input] }
+  overrides:        { from: [input], to: [input] }
+  mirrors:          { from: [source], to: [source] }

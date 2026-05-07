@@ -1,9 +1,5 @@
-# Caddy snippet for the weave service.
-# Use the production hostname `weave.rndexp.art` — `rndexp render --env local`
-# rewrites it to `weave.rndexp.localhost` so dev gets HTTPS via Caddy's
-# internal CA and *.localhost auto-resolution.
-
-weave.rndexp.art {
-	encode zstd gzip
-	reverse_proxy 127.0.0.1:8007
-}
+# weave has no public HTTP surface. All clients (kiln, telegram-bot,
+# explorer, dashboard) reach it on the docker network as `weave:8007`.
+# The gateway's render step requires this file to exist for every
+# enabled service; we leave it empty so Caddy doesn't try to provision
+# a TLS cert for a hostname with no DNS.
