@@ -1,0 +1,9 @@
+# Caddy snippet for the weave service.
+# Use the production hostname `weave.rndexp.art` — `rndexp render --env local`
+# rewrites it to `weave.rndexp.localhost` so dev gets HTTPS via Caddy's
+# internal CA and *.localhost auto-resolution.
+
+weave.rndexp.art {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8007
+}
